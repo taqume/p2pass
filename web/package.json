@@ -1,0 +1,36 @@
+{
+  "name": "p2pass-web",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint ."
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.101.4",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.468.0",
+    "motion": "^12.23.12",
+    "next": "^16.3.1",
+    "qr-scanner": "^1.4.2",
+    "qrcode.react": "^4.2.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tailwind-merge": "^3.3.1",
+    "viem": "^2.55.18",
+    "wagmi": "^3.7.6"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.1",
+    "@tailwindcss/postcss": "^4.1.12",
+    "@types/node": "^22.17.2",
+    "@types/react": "^19.1.10",
+    "@types/react-dom": "^19.1.7",
+    "eslint": "^9.34.0",
+    "eslint-config-next": "^15.5.2",
+    "tailwindcss": "^4.1.12",
+    "typescript": "^5.9.2"
+  }
+}
