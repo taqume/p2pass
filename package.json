@@ -7,7 +7,7 @@
     "build": "npm --prefix web run build",
     "lint": "npm --prefix web run lint",
     "test:contracts": "forge test --root contracts",
-    "test": "npm run test:contracts && npm run lint && npm run build"
+    "test:web": "npm --prefix web run test",
+    "test": "npm run test:contracts && npm run test:web && npm run lint && npm run build"
   }
 }
-

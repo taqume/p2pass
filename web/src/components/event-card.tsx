@@ -28,7 +28,7 @@ export function EventCard({ event, featured = false }: { event: P2Event; feature
         <div>
           <div className="flex items-start justify-between gap-4">
             <div><div className="text-2xl font-semibold tracking-[-.04em]">{event.date}</div><div className="mt-1 text-xs text-slate-500">{event.time}</div></div>
-            <span className="flex items-center gap-1 text-sm"><Star size={14} fill="#f59e0b" color="#f59e0b" /> {event.rating}</span>
+            <span className="flex items-center gap-1 text-sm"><Star size={14} fill="#f59e0b" color="#f59e0b" /> {event.rating > 0 ? event.rating.toFixed(1) : text({ en: "New", tr: "Yeni" })}</span>
           </div>
           <p className="mt-6 text-sm leading-6 text-slate-400">{event.summary}</p>
           <div className="mt-5 flex items-center gap-2 text-xs text-slate-500"><MapPin size={14} /> {event.location}</div>
@@ -36,7 +36,7 @@ export function EventCard({ event, featured = false }: { event: P2Event; feature
         <div className="mt-8 border-t border-white/8 pt-5">
           <div className="mb-4 flex items-end justify-between">
             <div><div className="eyebrow !text-slate-600">{text({ en: "ENTRY", tr: "GİRİŞ" })}</div><div className="mt-1 font-semibold">{event.price === 0 ? text({ en: "FREE", tr: "ÜCRETSİZ" }) : formatEth(event.price)}</div></div>
-            <div className="text-right"><div className="eyebrow !text-slate-600">{text({ en: "CLAIMED", tr: "ALINAN" })}</div><div className="mono mt-1 text-sm">{event.registered} / {event.capacity}</div></div>
+            <div className="text-right"><div className="eyebrow !text-slate-600">{text({ en: "CLAIMED", tr: "ALINAN" })}</div><div className="mono mt-1 text-sm">{event.registered} / {event.capacity === 0 ? "∞" : event.capacity}</div></div>
           </div>
           <Link href={`/events/${event.id}`} className="flex items-center justify-between text-sm font-semibold text-[var(--brand)]">{text({ en: "View admission", tr: "Etkinliği görüntüle" })} <ArrowUpRight size={16} /></Link>
           <div className="mono mt-3 text-[10px] text-slate-600">{text({ en: "HOST", tr: "ORGANİZATÖR" })} {shortAddress(event.organizer)}</div>

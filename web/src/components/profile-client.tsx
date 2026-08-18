@@ -3,12 +3,15 @@
 import { ExternalLink, Link as LinkIcon, Pencil, ShieldCheck, Star, TicketCheck, UserRoundCheck } from "lucide-react";
 import { useState } from "react";
 import type { Address } from "viem";
-import { useAccount, useReadContract, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
+import { useAccount, useReadContract, useReadContracts, useWaitForTransactionReceipt, useWriteContract } from "wagmi";
 import { contracts, contractsReady, coreAbi, reputationAbi } from "@/lib/contracts";
 import { shortAddress } from "@/lib/utils";
 import { TransactionStatus } from "./transaction-status";
 import { PeerRatingForm } from "./peer-rating-form";
+import type { ChainEvent } from "./onchain-event-list";
 import { useUIPreferences } from "./ui-preferences";
+
+type ReviewTuple = { proofEventId: bigint; rating: number; comment: string; updatedAt: bigint };
 
 export function ProfileClient({ profileAddress }: { profileAddress: Address }) {
   const { text } = useUIPreferences();
@@ -16,20 +19,33 @@ export function ProfileClient({ profileAddress }: { profileAddress: Address }) {
   const [editing, setEditing] = useState(false);
   const profileRead = useReadContract({ address: contracts.reputation, abi: reputationAbi, functionName: "getProfile", args: [profileAddress], query: { enabled: contractsReady } });
   const ratingRead = useReadContract({ address: contracts.reputation, abi: reputationAbi, functionName: "peerAverage", args: [profileAddress], query: { enabled: contractsReady } });
+  const peerReviewsRead = useReadContract({ address: contracts.reputation, abi: reputationAbi, functionName: "getPeerReviews", args: [profileAddress], query: { enabled: contractsReady } });
   const joinedRead = useReadContract({ address: contracts.core, abi: coreAbi, functionName: "getJoinedEvents", args: [profileAddress], query: { enabled: contractsReady } });
   const createdRead = useReadContract({ address: contracts.core, abi: coreAbi, functionName: "getCreatedEvents", args: [profileAddress], query: { enabled: contractsReady } });
+  const joinedIds = joinedRead.data?.map(Number) ?? [];
+  const joinedEventReads = useReadContracts({
+    contracts: joinedIds.map(id => ({ address: contracts.core, abi: coreAbi, functionName: "getEvent" as const, args: [BigInt(id)] })),
+    query: { enabled: contractsReady && joinedIds.length > 0 },
+  });
+  const attendanceReads = useReadContracts({
+    contracts: joinedIds.map(id => ({ address: contracts.core, abi: coreAbi, functionName: "attended" as const, args: [BigInt(id), profileAddress] })),
+    query: { enabled: contractsReady && joinedIds.length > 0 },
+  });
   const profile = profileRead.data;
   const isOwner = address?.toLowerCase() === profileAddress.toLowerCase();
-  const displayName = profile?.displayName || (contractsReady ? shortAddress(profileAddress, 7) : "Leyla Nova");
-  const username = profile?.username || (contractsReady ? "wallet profile" : "leylanova.eth");
-  const bio = profile?.bio || (contractsReady ? "This wallet has not added an on-chain bio yet." : "Protocol designer. I host small rooms for big internet questions and help open-source communities meet in real life.");
-  const rating = ratingRead.data ? (Number(ratingRead.data) / 100).toFixed(1) : contractsReady ? "—" : "4.9";
-  const joined = joinedRead.data?.length ?? (contractsReady ? 0 : 12);
-  const created = createdRead.data?.length ?? (contractsReady ? 0 : 4);
+  const displayName = profile?.displayName || profile?.username || shortAddress(profileAddress, 7);
+  const identity = profile?.username ? `@${profile.username}` : shortAddress(profileAddress, 7);
+  const bio = profile?.bio || text({ en: "This wallet has not added an on-chain bio yet.", tr: "Bu cüzdan henüz on-chain biyografi eklemedi." });
+  const rating = ratingRead.data ? (Number(ratingRead.data) / 100).toFixed(1) : "—";
+  const attended = attendanceReads.data?.filter(result => result.status === "success" && result.result === true).length ?? 0;
+  const created = createdRead.data?.length ?? 0;
+  const [reviewers, peerReviews] = (peerReviewsRead.data ?? [[], []]) as readonly [readonly Address[], readonly ReviewTuple[]];
+
+  if (!contractsReady) return <div className="shell py-14"><div className="panel p-12 text-center"><h1 className="text-xl font-semibold">{text({ en: "Contract configuration required", tr: "Kontrat yapılandırması gerekli" })}</h1><p className="mt-2 text-sm text-slate-500">{text({ en: "No profile data is substituted when the live deployment is unavailable.", tr: "Canlı deployment ulaşılamadığında profil verisi yerine başka veri gösterilmez." })}</p></div></div>;
+  if (profileRead.isError || ratingRead.isError || joinedRead.isError || createdRead.isError || peerReviewsRead.isError) return <div className="shell py-14"><div className="panel p-12 text-center"><h1 className="text-xl font-semibold">{text({ en: "Profile could not be read", tr: "Profil okunamadı" })}</h1><p className="mt-2 text-sm text-slate-500">{text({ en: "Check the Base Sepolia RPC connection and try again.", tr: "Base Sepolia RPC bağlantısını kontrol edip tekrar dene." })}</p></div></div>;
 
   return (
     <div className="shell py-14">
-      {!contractsReady && <div className="mb-6 border-l-2 border-amber-400 bg-amber-400/5 p-3 text-xs text-amber-300">Profile preview mode · deploy contracts to read this address from Base Sepolia.</div>}
       <section className="grid gap-8 border-b border-white/10 pb-12 md:grid-cols-[160px_1fr_auto] md:items-end">
         <div className="event-art tone-amber grid aspect-square place-items-center border border-white/12"><div className="event-art-grid" /><span className="relative text-5xl font-semibold">{displayName.slice(0,2).toUpperCase()}</span></div>
         <div><div className="mb-3 flex items-center gap-2 text-xs font-semibold text-green-400"><ShieldCheck size={14} /> ON-CHAIN PROFILE</div><h1 className="page-title !text-[clamp(2.4rem,5vw,4.8rem)]">{displayName}</h1><div className="mono mt-3 text-sm text-slate-500">{profileAddress}</div><p className="mt-5 max-w-2xl leading-7 text-slate-400">{bio}</p>{profile?.link && <a href={profile.link} target="_blank" rel="noreferrer" className="mt-3 inline-flex items-center gap-2 text-sm text-[var(--brand)]"><LinkIcon size={14} /> {profile.link} <ExternalLink size={12} /></a>}</div>
@@ -40,14 +56,20 @@ export function ProfileClient({ profileAddress }: { profileAddress: Address }) {
 
       <section className="grid border-b border-white/10 sm:grid-cols-4 sm:divide-x sm:divide-white/10">
         <Stat label={text({ en: "PEER RATING", tr: "KİŞİ PUANI" })} value={rating} icon={<Star fill="#f59e0b" color="#f59e0b" />} />
-        <Stat label={text({ en: "EVENTS ATTENDED", tr: "KATILDIĞI ETKİNLİK" })} value={String(joined)} icon={<UserRoundCheck />} />
+        <Stat label={text({ en: "EVENTS ATTENDED", tr: "KATILDIĞI ETKİNLİK" })} value={attendanceReads.isLoading ? "—" : String(attended)} icon={<UserRoundCheck />} />
         <Stat label={text({ en: "EVENTS CREATED", tr: "OLUŞTURDUĞU ETKİNLİK" })} value={String(created)} icon={<TicketCheck />} />
-        <Stat label={text({ en: "IDENTITY", tr: "KİMLİK" })} value={`@${username}`} small icon={<ShieldCheck />} />
+        <Stat label={text({ en: "IDENTITY", tr: "KİMLİK" })} value={identity} small icon={<ShieldCheck />} />
       </section>
 
       <div className="grid gap-12 py-12 lg:grid-cols-[1fr_360px]">
-        <section><div className="eyebrow">{text({ en: "ON-CHAIN HISTORY", tr: "ON-CHAIN GEÇMİŞ" })}</div><h2 className="section-title mt-3">{text({ en: "Attendance ledger", tr: "Katılım kaydı" })}</h2><div className="mt-7 divide-y divide-white/8 border-y border-white/8">{(joinedRead.data?.map(Number) ?? [42,39,36]).slice(0,5).map((id, index) => <div key={id} className="flex items-center justify-between py-5"><div><div className="text-sm font-semibold">{contractsReady ? `Event #${id}` : ["Protocol After Hours", "Base Builders Breakfast", "Commons Table #06"][index]}</div><div className="mt-1 text-xs text-slate-500">EVENT #{String(id).padStart(3,"0")} · BASE SEPOLIA</div></div><span className="flex items-center gap-2 text-xs font-bold text-green-400"><ShieldCheck size={14} /> {text({ en: "ATTENDED", tr: "KATILDI" })}</span></div>)}</div></section>
-        <section><div className="panel p-5"><div className="eyebrow">{text({ en: "PEER REPUTATION", tr: "KİŞİ İTİBARI" })}</div><div className="mt-5 flex items-end gap-2"><span className="text-5xl font-semibold tracking-[-.06em]">{rating}</span><span className="mb-1 text-sm text-slate-500">/ 5.0</span></div><p className="mt-4 text-sm leading-6 text-slate-500">{text({ en: "Every review is backed by an event both wallets actually attended.", tr: "Her değerlendirme, iki cüzdanın da gerçekten katıldığı bir etkinlikle desteklenir." })}</p></div>{address && !isOwner && <PeerRatingForm target={profileAddress} />}</section>
+        <section><div className="eyebrow">{text({ en: "ON-CHAIN HISTORY", tr: "ON-CHAIN GEÇMİŞ" })}</div><h2 className="section-title mt-3">{text({ en: "Pass & attendance ledger", tr: "Pass ve katılım kaydı" })}</h2>{joinedRead.isLoading ? <div className="mt-7 border-y border-white/8 py-10 text-center text-sm text-slate-500">{text({ en: "Reading Base Sepolia…", tr: "Base Sepolia okunuyor…" })}</div> : joinedIds.length === 0 ? <div className="mt-7 border-y border-white/8 py-10 text-center text-sm text-slate-500">{text({ en: "This wallet has no event passes yet.", tr: "Bu cüzdanın henüz etkinlik pass'i yok." })}</div> : <div className="mt-7 divide-y divide-white/8 border-y border-white/8">{joinedIds.slice(0,5).map((id, index) => {
+          const eventResult = joinedEventReads.data?.[index];
+          const event = eventResult?.status === "success" ? eventResult.result as ChainEvent : undefined;
+          const attendanceResult = attendanceReads.data?.[index];
+          const wasAttended = attendanceResult?.status === "success" && attendanceResult.result === true;
+          return <div key={id} className="flex items-center justify-between gap-4 py-5"><div><div className="text-sm font-semibold">{event?.name ?? `Event #${id}`}</div><div className="mt-1 text-xs text-slate-500">EVENT #{String(id).padStart(3,"0")} · BASE SEPOLIA</div></div><span className={`flex items-center gap-2 text-xs font-bold ${wasAttended ? "text-green-400" : "text-slate-500"}`}><ShieldCheck size={14} /> {wasAttended ? text({ en: "ATTENDED", tr: "KATILDI" }) : text({ en: "PASS ACTIVE", tr: "PASS AKTİF" })}</span></div>;
+        })}</div>}</section>
+        <section><div className="panel p-5"><div className="eyebrow">{text({ en: "PEER REPUTATION", tr: "KİŞİ İTİBARI" })}</div><div className="mt-5 flex items-end gap-2"><span className="text-5xl font-semibold tracking-[-.06em]">{rating}</span><span className="mb-1 text-sm text-slate-500">/ 5.0</span></div><p className="mt-4 text-sm leading-6 text-slate-500">{text({ en: "Every review is backed by an event both wallets actually attended.", tr: "Her değerlendirme, iki cüzdanın da gerçekten katıldığı bir etkinlikle desteklenir." })}</p><div className="mt-5 divide-y divide-white/8 border-t border-white/8">{peerReviewsRead.isLoading ? <div className="py-4 text-xs text-slate-500">{text({ en: "Reading peer reviews…", tr: "Kişi yorumları okunuyor…" })}</div> : peerReviews.length === 0 ? <div className="py-4 text-xs text-slate-500">{text({ en: "No verified peer review yet.", tr: "Henüz doğrulanmış kişi yorumu yok." })}</div> : peerReviews.slice(0, 5).map((review, index) => <article key={reviewers[index]} className="py-4"><div className="flex items-center justify-between gap-3"><span className="mono text-[10px] text-slate-500">{shortAddress(reviewers[index], 5)} · EVENT #{Number(review.proofEventId)}</span><span className="flex items-center gap-1 text-xs"><Star size={11} fill="#f59e0b" color="#f59e0b" /> {review.rating}/5</span></div><p className="mt-2 text-xs leading-5 text-slate-300">{review.comment || text({ en: "Rating recorded without a comment.", tr: "Yorumsuz puan kaydedildi." })}</p></article>)}</div></div>{address && !isOwner && <PeerRatingForm target={profileAddress} />}</section>
       </div>
     </div>
   );

@@ -20,7 +20,7 @@ contracts/
   script/Deploy.s.sol        Base Sepolia deployment
 ```
 
-There is no API server, database, privileged indexer, proxy, or upgrade layer. Public registry data is read directly through the configured Base Sepolia RPC endpoint.
+There is no API server, database, privileged indexer, proxy, or upgrade layer. Public registry data is read directly from Base Sepolia. The web client falls back to Base's documented public alternative when the primary rate-limited RPC is temporarily unavailable.
 
 ## Base Sepolia deployment
 
@@ -57,7 +57,7 @@ npm run test:contracts
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Without deployed addresses, the public UI runs in clearly marked preview mode with sample events; state-changing actions stay disabled.
+Open [http://localhost:3000](http://localhost:3000). Every event, pass, profile, participant, attendance and rating shown by the UI comes from the configured Base Sepolia contracts. If deployment addresses are missing or the chain cannot be read, the interface shows an explicit unavailable/empty state and never substitutes sample data.
 
 ## Deploy to Base Sepolia
 
@@ -99,8 +99,8 @@ The suggested `0.0002 ETH` creation fee is a fixed testnet friction value, not a
 npm run test
 ```
 
-This runs the Foundry suite, ESLint, TypeScript checks, and the optimized Next.js production build.
+This runs the Foundry contract suite, QR payload unit tests, ESLint, TypeScript checks, and the optimized Next.js production build.
 
 ## QR security model
 
-A pass QR encodes `p2pass:84532:<eventId>:<participantAddress>`. It intentionally contains no reusable secret. Contract authorization is the security boundary: only the event organizer or an explicitly authorized scanner wallet can submit a successful check-in, and the target must already own the event pass.
+A pass QR encodes `p2pass:84532:<eventId>:<participantAddress>`. It intentionally contains no reusable secret. Before enabling check-in, the scanner verifies the pass, event window, duplicate-attendance state, and scanner authorization against Base Sepolia. Contract authorization remains the security boundary: only the event organizer or an explicitly authorized scanner wallet can submit a successful check-in, the target must already own the event pass, and the transaction permanently marks `attended[eventId][participant]` as true.
