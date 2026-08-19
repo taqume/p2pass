@@ -7,7 +7,7 @@ import type { P2Event } from "@/lib/data";
 import { cn, formatEth, shortAddress } from "@/lib/utils";
 import { useUIPreferences } from "./ui-preferences";
 
-export function EventCard({ event, featured = false }: { event: P2Event; featured?: boolean }) {
+export function EventCard({ event, featured = false, ended = false }: { event: P2Event; featured?: boolean; ended?: boolean }) {
   const { text } = useUIPreferences();
   const spotlight = (pointer: React.PointerEvent<HTMLElement>) => {
     const bounds = pointer.currentTarget.getBoundingClientRect();
@@ -15,13 +15,13 @@ export function EventCard({ event, featured = false }: { event: P2Event; feature
     pointer.currentTarget.style.setProperty("--card-y", `${pointer.clientY - bounds.top}px`);
   };
   return (
-    <motion.article onPointerMove={spotlight} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .18 }} whileHover={{ y: -7 }} transition={{ duration: .42, ease: [0.22, 1, 0.36, 1] }} className={cn("event-card-interactive ticket-notch overflow-hidden border border-white/10 bg-[#111827]", featured && "lg:grid lg:grid-cols-[1.35fr_.65fr]")}>
+    <motion.article onPointerMove={spotlight} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: ended ? .52 : 1, y: 0 }} viewport={{ once: true, amount: .18 }} whileHover={{ y: ended ? -2 : -7, opacity: ended ? .72 : 1 }} transition={{ duration: .42, ease: [0.22, 1, 0.36, 1] }} className={cn("event-card-interactive ticket-notch overflow-hidden border border-white/10 bg-[#111827]", ended && "event-card-ended", featured && "lg:grid lg:grid-cols-[1.35fr_.65fr]")}>
       <Link href={`/events/${event.id}`} className={cn("event-art block min-h-48 p-5", `tone-${event.tone}`, featured && "lg:min-h-[380px] lg:p-8")}>
         <div className="event-art-grid" />
         <div className="relative z-10 flex h-full flex-col justify-between gap-14">
           <div className="flex items-start justify-between">
             <span className="eyebrow !text-white/70">EVENT #{String(event.id).padStart(3, "0")}</span>
-            <span className="rounded-full border border-white/15 bg-black/15 px-2.5 py-1 text-[10px] font-bold tracking-wider text-white/80">BASE SEPOLIA</span>
+            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-bold tracking-wider ${ended ? "border-white/10 bg-black/25 text-white/55" : "border-white/15 bg-black/15 text-white/80"}`}>{ended ? text({ en: "ENDED", tr: "BİTTİ" }) : "BASE SEPOLIA"}</span>
           </div>
           <div>
             <div className="mb-3 flex flex-wrap gap-2">{event.tags.map(tag => <span key={tag} className="text-xs text-white/65">#{(tag === "Free" ? text({ en: "free", tr: "ücretsiz" }) : tag === "Ticketed" ? text({ en: "ticketed", tr: "ücretli" }) : tag).toLowerCase().replace(" ", "-")}</span>)}</div>
