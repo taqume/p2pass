@@ -9,8 +9,13 @@ import { useUIPreferences } from "./ui-preferences";
 
 export function EventCard({ event, featured = false }: { event: P2Event; featured?: boolean }) {
   const { text } = useUIPreferences();
+  const spotlight = (pointer: React.PointerEvent<HTMLElement>) => {
+    const bounds = pointer.currentTarget.getBoundingClientRect();
+    pointer.currentTarget.style.setProperty("--card-x", `${pointer.clientX - bounds.left}px`);
+    pointer.currentTarget.style.setProperty("--card-y", `${pointer.clientY - bounds.top}px`);
+  };
   return (
-    <motion.article whileHover={{ y: -4 }} transition={{ duration: .2 }} className={cn("ticket-notch overflow-hidden border border-white/10 bg-[#111827]", featured && "lg:grid lg:grid-cols-[1.35fr_.65fr]")}>
+    <motion.article onPointerMove={spotlight} initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true, amount: .18 }} whileHover={{ y: -7 }} transition={{ duration: .42, ease: [0.22, 1, 0.36, 1] }} className={cn("event-card-interactive ticket-notch overflow-hidden border border-white/10 bg-[#111827]", featured && "lg:grid lg:grid-cols-[1.35fr_.65fr]")}>
       <Link href={`/events/${event.id}`} className={cn("event-art block min-h-48 p-5", `tone-${event.tone}`, featured && "lg:min-h-[380px] lg:p-8")}>
         <div className="event-art-grid" />
         <div className="relative z-10 flex h-full flex-col justify-between gap-14">

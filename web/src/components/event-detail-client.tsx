@@ -25,7 +25,7 @@ export function EventDetailClient({ event }: { event: P2Event }) {
   const registrationStarted = Math.floor(Date.now() / 1000) >= event.startTime;
   const isFull = event.capacity !== 0 && event.registered >= event.capacity;
 
-  const claim = () => writeContract({ address: contracts.core, abi: coreAbi, functionName: "joinEvent", args: [BigInt(event.id)], value: BigInt(Math.round(event.price * 1e18)) });
+  const claim = () => writeContract({ address: contracts.core, abi: coreAbi, functionName: "joinEvent", args: [BigInt(event.id)], value: event.priceWei });
   const refund = () => writeContract({ address: contracts.core, abi: coreAbi, functionName: "claimRefund", args: [BigInt(event.id)] });
 
   return (

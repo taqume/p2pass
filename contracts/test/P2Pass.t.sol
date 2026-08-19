@@ -63,6 +63,38 @@ contract P2PassTest is Test {
         core.joinEvent{value: TICKET_PRICE - 1}(eventId);
     }
 
+    function testOrganizerCanBuyTheirOwnPass() public {
+        uint256 eventId = _createEvent(TICKET_PRICE, 10);
+        _join(eventId, organizer, TICKET_PRICE);
+
+        assertEq(pass.balanceOf(organizer, eventId), 1);
+        assertEq(core.paidAmount(eventId, organizer), TICKET_PRICE);
+        assertEq(core.getJoinedEvents(organizer)[0], eventId);
+    }
+
+    function testEventCanBeEditedBeforeStartButPriceLocksAfterRegistration() public {
+        uint256 eventId = _createEvent(TICKET_PRICE, 10);
+        P2PassCore.EventInput memory update = P2PassCore.EventInput({
+            name: "Updated Assembly",
+            description: "Updated details",
+            location: "Base Istanbul",
+            imageURI: "ipfs://updated",
+            startTime: uint64(block.timestamp + 2 days),
+            endTime: uint64(block.timestamp + 4 days),
+            capacity: 20,
+            price: 0.02 ether
+        });
+        vm.prank(organizer);
+        core.updateEvent(eventId, update);
+        assertEq(core.getEvent(eventId).name, "Updated Assembly");
+
+        _join(eventId, alice, 0.02 ether);
+        update.price = 0.03 ether;
+        vm.prank(organizer);
+        vm.expectRevert(P2PassCore.PriceLocked.selector);
+        core.updateEvent(eventId, update);
+    }
+
     function testOrganizerAndAuthorizedScannerCanCheckIn() public {
         uint256 eventId = _createEvent(0, 10);
         _join(eventId, alice, 0);
@@ -93,6 +125,31 @@ contract P2PassTest is Test {
         vm.prank(bob);
         vm.expectRevert(P2PassCore.NotScanner.selector);
         core.checkIn(eventId, alice);
+    }
+
+    function testRevokedScannerCanNoLongerCheckIn() public {
+        uint256 eventId = _createEvent(0, 10);
+        _join(eventId, alice, 0);
+        vm.startPrank(organizer);
+        core.setScanner(eventId, scanner, true);
+        core.setScanner(eventId, scanner, false);
+        vm.stopPrank();
+        vm.warp(block.timestamp + 2 days);
+
+        vm.prank(scanner);
+        vm.expectRevert(P2PassCore.NotScanner.selector);
+        core.checkIn(eventId, alice);
+    }
+
+    function testCreatedJoinedAndParticipantIndexesStayInSync() public {
+        uint256 first = _createEvent(0, 10);
+        uint256 second = _createEvent(0, 10);
+        _join(first, alice, 0);
+        _join(second, alice, 0);
+
+        assertEq(core.getCreatedEvents(organizer).length, 2);
+        assertEq(core.getJoinedEvents(alice).length, 2);
+        assertEq(core.getParticipants(first)[0], alice);
     }
 
     function testCheckInOutsideEventWindowFails() public {
@@ -227,6 +284,13 @@ contract P2PassTest is Test {
         P2PassReputation.Profile memory profile = reputation.getProfile(alice);
         assertEq(profile.username, "alice");
         assertEq(profile.displayName, "Alice A.");
+    }
+
+    function testProfileFieldLimitsReturnTextTooLong() public {
+        string memory oversizedUsername = new string(65);
+        vm.prank(alice);
+        vm.expectRevert(P2PassReputation.TextTooLong.selector);
+        reputation.updateProfile(oversizedUsername, "Alice", "Bio", "", "");
     }
 
     function _createEvent(uint96 price, uint32 capacity) internal returns (uint256 eventId) {

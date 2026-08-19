@@ -9,8 +9,21 @@ export const contracts = {
 };
 
 export const contractsReady = contracts.core !== zero && contracts.reputation !== zero;
+export const reputationDeploymentBlock = BigInt(process.env.NEXT_PUBLIC_REPUTATION_DEPLOYMENT_BLOCK || "45651673");
+
+const coreErrors = [
+  "EventNotFound", "NotOrganizer", "NotScanner", "InvalidSchedule", "InvalidPayment",
+  "EventStarted", "EventNotActive", "EventNotEnded", "EventIsCancelled", "EventIsNotCancelled",
+  "CapacityReached", "InvalidCapacity", "AlreadyRegistered", "NotRegistered", "AlreadyAttended",
+  "AlreadySettled", "NothingToClaim", "TransferFailed", "PriceLocked",
+].map(name => ({ type: "error" as const, name, inputs: [] as const }));
+
+const reputationErrors = [
+  "InvalidRating", "InvalidTarget", "AttendanceRequired", "EventNotFound", "TextTooLong",
+].map(name => ({ type: "error" as const, name, inputs: [] as const }));
 
 export const coreAbi = [
+  ...coreErrors,
   { type: "function", name: "eventCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "creationFee", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "hasPass", stateMutability: "view", inputs: [{ name: "eventId", type: "uint256" }, { name: "account", type: "address" }], outputs: [{ type: "bool" }] },
@@ -37,6 +50,8 @@ export const coreAbi = [
 ] as const;
 
 export const reputationAbi = [
+  ...reputationErrors,
+  { type: "event", name: "ProfileUpdated", anonymous: false, inputs: [{ indexed: true, name: "account", type: "address" }, { indexed: false, name: "username", type: "string" }, { indexed: false, name: "displayName", type: "string" }] },
   { type: "function", name: "updateProfile", stateMutability: "nonpayable", inputs: [{ name: "username", type: "string" }, { name: "displayName", type: "string" }, { name: "bio", type: "string" }, { name: "avatarURI", type: "string" }, { name: "link", type: "string" }], outputs: [] },
   { type: "function", name: "getProfile", stateMutability: "view", inputs: [{ name: "account", type: "address" }], outputs: [{ type: "tuple", components: [{ name: "username", type: "string" }, { name: "displayName", type: "string" }, { name: "bio", type: "string" }, { name: "avatarURI", type: "string" }, { name: "link", type: "string" }, { name: "updatedAt", type: "uint64" }] }] },
   { type: "function", name: "peerAverage", stateMutability: "view", inputs: [{ name: "target", type: "address" }], outputs: [{ name: "averageX100", type: "uint256" }] },

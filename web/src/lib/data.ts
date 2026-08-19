@@ -9,6 +9,7 @@ export type P2Event = {
   endTime: number;
   location: string;
   price: number;
+  priceWei: bigint;
   capacity: number;
   registered: number;
   organizer: `0x${string}`;

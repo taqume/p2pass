@@ -3,16 +3,17 @@
 import { Check, CircleAlert, LoaderCircle, Radio, Wallet } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import type { Hash } from "viem";
+import { readableContractError } from "@/lib/contract-errors";
 import { useUIPreferences } from "./ui-preferences";
 
 type Props = { hash?: Hash; isPending?: boolean; isConfirming?: boolean; isSuccess?: boolean; error?: Error | null };
 
 export function TransactionStatus({ hash, isPending, isConfirming, isSuccess, error }: Props) {
-  const { text } = useUIPreferences();
+  const { language, text } = useUIPreferences();
   const active = isPending || hash || error;
   if (!active) return null;
   const content = error
-    ? { icon: <CircleAlert size={18} />, title: text({ en: "Transaction failed", tr: "İşlem başarısız" }), text: error.message.split("\n")[0], color: "text-red-400" }
+    ? { icon: <CircleAlert size={18} />, title: text({ en: "Transaction failed", tr: "İşlem başarısız" }), text: readableContractError(error, language), color: "text-red-400" }
     : isPending
       ? { icon: <Wallet size={18} />, title: text({ en: "Waiting for wallet", tr: "Cüzdan bekleniyor" }), text: text({ en: "Review and confirm the request in your wallet.", tr: "İsteği cüzdanında kontrol edip onayla." }), color: "text-amber-400" }
       : isSuccess

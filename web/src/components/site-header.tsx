@@ -11,6 +11,7 @@ import { baseSepolia } from "wagmi/chains";
 import { contracts, contractsReady, reputationAbi } from "@/lib/contracts";
 import { shortAddress } from "@/lib/utils";
 import { useUIPreferences } from "./ui-preferences";
+import { ProfileSearch } from "./profile-search";
 
 const navItems = [
   { en: "Home", tr: "Ana Sayfa", href: "/", icon: House },
@@ -84,24 +85,36 @@ export function SiteHeader() {
   const { address } = useAccount();
   const { text } = useUIPreferences();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => setMobileOpen(false), [pathname]);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 900px)");
+    const sync = () => {
+      setIsMobile(media.matches);
+      if (!media.matches) setMobileOpen(false);
+    };
+    sync();
+    media.addEventListener("change", sync);
+    return () => media.removeEventListener("change", sync);
+  }, []);
 
   return (
     <header className="site-header">
       <div className="header-shell">
         <Link href="/" className="brand-wordmark" aria-label="P2Pass home"><Image src="/p2pass-wordmark.png" width={2172} height={724} alt="P2Pass" className="h-auto w-full object-contain" priority /></Link>
-        <nav className="hidden items-center gap-1 sm:flex" aria-label="Main navigation">
+        <nav className="desktop-nav items-center gap-1" aria-label="Main navigation">
           {navItems.map(item => { const active = isActivePath(pathname, item.href); const Icon = item.icon; return <Link key={item.href} href={item.href} className={`nav-link ${active ? "is-active" : ""}`} aria-current={active ? "page" : undefined}><Icon size={15} /><span>{text({ en: item.en, tr: item.tr })}</span></Link>; })}
         </nav>
         <div className="ml-auto flex items-center gap-2">
-          <div className="hidden items-center gap-2 sm:flex"><PreferenceControls />{address && <Link href="/create" className="create-nav-button"><Plus size={15} /> <span className="hidden xl:inline">{text({ en: "Create Event", tr: "Etkinlik Oluştur" })}</span></Link>}</div>
+          <div className="desktop-actions items-center gap-2"><ProfileSearch /><PreferenceControls />{address && <Link href="/create" className="create-nav-button"><Plus size={15} /> <span className="hidden xl:inline">{text({ en: "Create Event", tr: "Etkinlik Oluştur" })}</span></Link>}</div>
           <WalletControl />
-          <button onClick={() => setMobileOpen(current => !current)} className="header-tool sm:hidden" aria-label={text({ en: "Open menu", tr: "Menüyü aç" })}>{mobileOpen ? <X size={20} /> : <Menu size={20} />}</button>
+          {isMobile && <button onClick={() => setMobileOpen(current => !current)} className="header-tool" aria-label={text({ en: "Open menu", tr: "Menüyü aç" })}>{mobileOpen ? <X size={20} /> : <Menu size={20} />}</button>}
         </div>
       </div>
       <AnimatePresence>
-        {mobileOpen && <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mobile-nav sm:hidden"><div className="grid gap-1 px-4 py-4">
+        {isMobile && mobileOpen && <motion.nav initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="mobile-nav"><div className="grid gap-1 px-4 py-4">
+          <ProfileSearch mobile />
           {navItems.map(item => { const Icon = item.icon; const active = isActivePath(pathname, item.href); return <Link key={item.href} href={item.href} className={`nav-link !justify-start ${active ? "is-active" : ""}`}><Icon size={16} />{text({ en: item.en, tr: item.tr })}</Link>; })}
           {address && <Link href="/create" className="nav-link !justify-start"><Plus size={16} /> {text({ en: "Create Event", tr: "Etkinlik Oluştur" })}</Link>}
           <PreferenceControls mobile />

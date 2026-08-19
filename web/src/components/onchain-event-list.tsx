@@ -21,7 +21,7 @@ export function chainEventToView(id: number, item: ChainEvent): P2Event {
     date: start.toLocaleDateString("en-US", { month: "short", day: "2-digit" }).toUpperCase(),
     time: `${start.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })} — ${end.toLocaleTimeString("en-US", { hour: "2-digit", minute: "2-digit" })}`,
     startTime: Number(item.startTime), endTime: Number(item.endTime),
-    location: item.location, price: Number(item.price) / 1e18, capacity: item.capacity, registered: item.registered,
+    location: item.location, price: Number(item.price) / 1e18, priceWei: item.price, capacity: item.capacity, registered: item.registered,
     organizer: item.organizer, imageURI: item.imageURI, tone: (["blue", "violet", "amber", "green"] as const)[id % 4], tags: [item.price === 0n ? "Free" : "Ticketed", "On-chain"], rating: 0, cancelled: item.cancelled, settled: item.settled,
   };
 }
